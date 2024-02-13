@@ -1,0 +1,11 @@
+Problems to be solved
++ Main menu needs to have register,login or exit as user (Do not worry about admin.)
++ Admin needs to have special username and passkey that redirects him to his menu 
++ Why does our checkout clear the whole populated struct. ?
++ Also user actions should affect directly the inventory not the populated struct.
++ I dont think they would be need for structs again.
++ Add feedback menu to the user section.
+
+
+Find a Problem in the code ?
+Add it here.
