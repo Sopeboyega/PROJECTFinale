@@ -22,7 +22,7 @@ void loginUser();
 void loginAdmin();
 void showUserMenu();
 void showAdminMenu();
-void add_to_cart(const char *name, int quantity);
+void addToCart(const char *name, int quantity);
 void display_items(const char *file_name);
 void view_cart();
 void checkout();
@@ -32,8 +32,9 @@ void addProduct();
 void deleteProduct();
 void trackProduct();
 void displayProducts();
-
-
+void clear_cart();
+void update_inventory(const char *file_name);
+int findProductIndex(const char *product_id);
 
 #define MAX_COLUMNS 10
 #define MAX_LENGTH 100
@@ -66,6 +67,8 @@ int main() {
     
     const char *file_name = "inventory.csv";
     int choice;
+
+ populate_products("inventory.csv");
 
     printf("Welcome to the online store!\n");
 
@@ -268,7 +271,7 @@ void showUserMenu() {
 
         switch (choice) {
             case 1:
-                display_items(file_name);
+                displayProducts() ;
                 break;
             case 2: {
                 char name[MAX_LENGTH];
@@ -276,14 +279,14 @@ void showUserMenu() {
                 scanf("%s", name);
                 printf("Enter the quantity: ");
                 scanf("%d", &quantity);
-                add_to_cart(name, quantity);
+                addToCart(name, quantity);
                 break;
             }
             case 3:
                 view_cart();
                 break;
             case 4:
-                checkout();
+                checkout(file_name);
                 break;
             case 5:
                 exit_program();
@@ -343,6 +346,38 @@ void showAdminMenu() {
     } while (1);
 }
 
+int findProductIndex(const char *product_id) {
+    for (int i = 0; i < numProducts; i++) {
+        if (strcmp(products[i].product_id, product_id) == 0) {
+            return i;  // Found the product, return its index
+        }
+    }
+    return -1;  // Product not found
+}
+
+// Trim leading and trailing whitespace from a string
+void trim(char *str) {
+    char *end;
+
+    // Trim leading whitespace
+    while (isspace((unsigned char)*str)) {
+        str++;
+    }
+
+    if (*str == 0) {  // All whitespace
+        return;
+    }
+
+    // Trim trailing whitespace
+    end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end)) {
+        end--;
+    }
+
+    // Null-terminate the trimmed string
+    *(end + 1) = '\0';
+}
+
 
 
 // Function to read data from CSV and populate products array
@@ -354,8 +389,7 @@ void populate_products(const char *file_name) {
     }
 
     char line[MAX_COLUMNS * MAX_LENGTH];  // Allocate space for entire line
-    int line_count = 0; //A variable to count the number of lines read.
-
+    int line_count = 0; // A variable to count the number of lines read.
 
     while (fgets(line, sizeof(line), file)) {
         if (line_count == 0) { // Skip header line
@@ -363,7 +397,12 @@ void populate_products(const char *file_name) {
             continue;
         }
 
-        char *token = strtok(line, ","); //strtok is used for tokenizing the string.
+        if (numProducts >= MAX_PRODUCTS) {
+            printf("Error: Maximum capacity reached. Cannot add more products.\n");
+            break;
+        }
+
+        char *token = strtok(line, ","); // strtok is used for tokenizing the string.
         int column_count = 0; // Keeps track of the number of columns processed.
         Product product;
 
@@ -388,69 +427,82 @@ void populate_products(const char *file_name) {
             column_count++;
         }
 
-        // Add the product to the products array
-        products[line_count - 1] = product;
-        
-        numProducts++;
-        
+        // Check if the product already exists in the array
+        int existing_index = findProductIndex(product.product_id);
+        if (existing_index != -1) {
+            // Product already exists, update its information
+            products[existing_index] = product;
+        } else {
+            // Product doesn't exist, add it to the products array
+            trim(product.name);
+            products[numProducts] = product;
+            numProducts++;
+        }
+
         line_count++;
     }
-
-    // Update the cart size
-    cart_size = line_count - 1;
 
     fclose(file);
 }
 
+
+void strToLower(char *str) {
+    while (*str) {
+        *str = tolower((unsigned char)*str);
+        str++;
+    }
+}
+
+
+
 // Function to add a product to the cart
-void add_to_cart(const char *name, int quantity) {
-    for (int i = 0; i < MAX_PRODUCTS; i++) {
-        if (strcasecmp(products[i].name, name) == 0) {
+void addToCart(const char *name, int quantity) {
+    int found = 0;
+    for (int i = 0; i < numProducts; i++) {
+        // Preprocess product name: remove leading/trailing whitespace and convert to lowercase
+        char processedName[MAX_LENGTH];
+        strcpy(processedName, products[i].name);
+        trim(processedName);
+        strToLower(processedName);
+
+        // Preprocess the provided name in the same way
+        char providedName[MAX_LENGTH];
+        strcpy(providedName, name);
+        trim(providedName);
+        strToLower(providedName);
+
+
+
+        // Compare the processed names
+        if (strcmp(processedName,providedName) == 0) {
             // Check if enough quantity is available
             if (products[i].quantity >= quantity) {
-                // Check if the product is already in the cart
-                int found = 0;
-                for (int j = 0; j < cart_size; j++) {
-                    if (strcmp(cart[j].product_id, products[i].product_id) == 0) {
-                        cart[j].quantity += quantity;
-                        found = 1;
-                        break;
-                    }
-                }
-                if (!found) {
-                    // If not found, add new item to cart
-                    strcpy(cart[cart_size].product_id, products[i].product_id);
-                    strcpy(cart[cart_size].name, products[i].name);
-                    cart[cart_size].price = products[i].price;
-                    cart[cart_size].quantity = quantity;
-                    cart_size++;
-                }
-                // Reduce the quantity from the inventory
+                // Add product to cart
+                strcpy(cart[cart_size].product_id, products[i].product_id);
+                strcpy(cart[cart_size].name, products[i].name);
+                cart[cart_size].price = products[i].price;
+                cart[cart_size].quantity = quantity;
+                cart_size++;
+
+                // Update available quantity in the products array
                 products[i].quantity -= quantity;
                 printf("Added %d of %s to the cart.\n", quantity, name);
-                return;
+                found = 1;
             } else {
                 printf("Insufficient quantity available for %s.\n", name);
-                return;
             }
+            break;
         }
     }
-    printf("Product with name '%s' does not exist in inventory.\n", name);
-}
 
-
-// Function to display items available
-void display_items(const char *file_name) {
-    printf("Items available:\n");
-    for (int i = 0; i < cart_size; i++) {
-        printf("ID: %s, Name: %s, Price: $%.2f, Quantity: %d\n", 
-               products[i].product_id, products[i].name, products[i].price, products[i].quantity);
-    }
-
-    if (cart_size == 0) {
-        printf("No items available.\n");
+    if (!found) {
+        printf("Product with name '%s' not found.\n", name);
     }
 }
+
+
+
+
 
 // Function to view cart contents
 void view_cart() {
@@ -472,7 +524,8 @@ void view_cart() {
 
 
 // Function to checkout and finalize the order
-void checkout() {
+// Function to checkout and finalize the order
+void checkout(const char *file_name) {
     printf("\nCheckout\n");
     printf("Confirm your order (yes/no): ");
     char confirmation[10];
@@ -480,20 +533,34 @@ void checkout() {
 
     if (strcasecmp(confirmation, "yes") == 0) {
         double total_price = 0.0;
+
+        // Calculate the total price based on items in the cart
         for (int i = 0; i < cart_size; i++) {
             total_price += cart[i].quantity * cart[i].price;
         }
 
+        // Display items in the cart and subtotal
+        printf("Cart Contents:\n");
+        for (int i = 0; i < cart_size; i++) {
+            double subtotal = cart[i].quantity * cart[i].price;
+            printf("Product ID: %s, Name: %s, Quantity: %d, Price per item: $%.2f, Subtotal: $%.2f\n",
+                   cart[i].product_id, cart[i].name, cart[i].quantity, cart[i].price, subtotal);
+        }
         printf("Total Price: $%.2f\n", total_price);
-        printf("Order finalized. Thank you for your purchase!\n");
+
+        // Update the inventory
+        update_inventory(file_name);
 
         // Clear the cart
-        memset(cart, 0, sizeof(cart));
-        cart_size = 0;
+        clear_cart();
+
+        printf("Order finalized. Thank you for your purchase!\n");
     } else {
-        printf("Order canceled.\n");
+        printf("Order canceled. Products remain in the cart.\n");
     }
 }
+
+
 
 // Function to exit the program
 void exit_program() {
@@ -588,23 +655,77 @@ void trackProduct() {
 }
 
 
+
 // Function to display all products
 void displayProducts() {
-    printf("Products in inventory:\n");
-    for (int i = 0; i < numProducts; i++) {
-        printf("Product ID: %s, Name: %s, Price: %.2lf, Quantity: %d\n", products[i].product_id, products[i].name, products[i].price, products[i].quantity);
-    }
     if (numProducts == 0) {
         printf("No products in inventory.\n");
+        return;
+    }
+
+    printf("Products in inventory:\n");
+    for (int i = 0; i < numProducts; i++) {
+        printf("Product ID: %s, Name: %s, Price: %.2lf, Quantity: %d\n",
+               products[i].product_id, products[i].name, products[i].price, products[i].quantity);
     }
 }
 
 
 
+//convert string to lower  case
 
 
+void update_inventory(const char *file_name) {
+    // Open the inventory file in write mode to clear its contents
+    FILE *file = fopen("inventory.csv", "w");
+    if (file == NULL) {
+        printf("Error: Unable to open inventory file.\n");
+        return;
+    }
+    fclose(file);
 
+    // Reopen the inventory file in append mode to write the updated products
+    file = fopen("inventory.csv", "a");
+    if (file == NULL) {
+        printf("Error: Unable to open inventory file.\n");
+        return;
+    }
 
+    // Write the products from the populated struct to the inventory file
+    for (int i = 0; i < numProducts; i++) {
+        fprintf(file, "%s,%s,%.2lf,%d\n", products[i].product_id, products[i].name, products[i].price, products[i].quantity);
+    }
+
+    fclose(file);
+}
+
+void clear_cart() {
+    // Clear the cart by resetting its size to 0
+    cart_size = 0;
+}
+
+void submitFeedback() {
+    char feedback[MAX_LENGTH];
+
+    // Prompt the user for feedback
+    printf("Please enter your feedback (max %d characters): ", MAX_LENGTH);
+    getchar(); // Clear input buffer
+    fgets(feedback, MAX_LENGTH, stdin);
+
+    // Open the feedback file in append mode
+    FILE *file = fopen("feedback.txt", "a");
+    if (file == NULL) {
+        printf("Error opening feedback file.\n");
+        return;
+    }
+
+    // Write the feedback to the file
+    fprintf(file, "%s\n", feedback);
+
+    fclose(file);
+
+    printf("Thank you for your feedback!\n");
+}
 
 
 
