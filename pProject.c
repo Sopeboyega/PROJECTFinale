@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 // Structure for user information
 typedef struct {
@@ -16,10 +17,10 @@ typedef struct {
 } Admin;
 
 // Function prototypes for user management
-void signUpUser();
-void signUpAdmin();
-void loginUser();
-void loginAdmin();
+void displayFeedback();
+void submitFeedback();
+void registerUser();
+void login();
 void showUserMenu();
 void showAdminMenu();
 void addToCart(const char *name, int quantity);
@@ -62,72 +63,42 @@ int cart_size = 0;
 Product products[MAX_PRODUCTS];
 
 int main() {
-       
-
-    
     const char *file_name = "inventory.csv";
     int choice;
 
- populate_products("inventory.csv");
-
+    populate_products(file_name);
+system("cls");
     printf("Welcome to the online store!\n");
 
-    // Show user and admin signup options
-    printf("Do you want to sign up as a user or admin?\n");
-    printf("1. User\n");
-    printf("2. Admin\n");
+    // Main Menu: Register, Login, or Exit
+    printf("Main Menu:\n");
+    printf("1. Register\n");
+    printf("2. Login\n");
+    printf("3. Exit\n");
     printf("Enter your choice: ");
     scanf("%d", &choice);
 
     switch (choice) {
         case 1:
-            signUpUser();
+            registerUser();
             break;
         case 2:
-            signUpAdmin();
+            login();
+            break;
+        case 3:
+            exit_program();
             break;
         default:
             printf("Invalid choice. Exiting program.\n");
             exit(EXIT_FAILURE);
     }
 
-   // After signup, proceed to login
-printf("Account created successfully!\n");
-printf("Do you want to login as a user or admin?\n");
-printf("1. User\n");
-printf("2. Admin\n");
-printf("Enter your choice: ");
-int loginChoice;
-scanf("%d", &loginChoice);
-
-if (loginChoice == 1) {
-    loginUser();
-} else if (loginChoice == 2) {
-    loginAdmin();
-} else {
-    printf("Invalid choice. Exiting program.\n");
-    exit(EXIT_FAILURE);
-}
-
-
-    // Load product data
-    populate_products(file_name);
-
-    // Display Main Menu based on user type
-    if (strcmp(currentUserType, "user") == 0) {
-        showUserMenu();
-    } else if (strcmp(currentUserType, "admin") == 0) {
-           showAdminMenu(); // Call the admin menu function;
-    } else {
-        printf("Unknown user type. Exiting program.\n");
-        exit(EXIT_FAILURE);
-    }
-
     return 0;
 }
 
+
 // Function to allow user signup
-void signUpUser() {
+void registerUser() {
     User newUser;
 
     printf("Enter your desired username: ");
@@ -144,109 +115,58 @@ void signUpUser() {
     fprintf(userFile, "%s %s\n", newUser.username, newUser.password);
     fclose(userFile);
 
-    printf("User signup successful!\n");
+    printf("User registered successfully!\n");
 }
 
-// Function to allow admin signup
-void signUpAdmin() {
-    Admin newAdmin;
 
-    printf("Enter your desired admin username: ");
-    scanf("%s", newAdmin.username);
-    printf("Enter your desired admin password: ");
-    scanf("%s", newAdmin.password);
-
-    // Save admin info to file or database
-    FILE *adminFile = fopen("admins.txt", "a");
-    if (adminFile == NULL) {
-        printf("Error opening admin file.\n");
-        exit(EXIT_FAILURE);
-    }
-    fprintf(adminFile, "%s %s\n", newAdmin.username, newAdmin.password);
-    fclose(adminFile);
-
-    printf("Admin signup successful!\n");
-}
-
-// Function to handle user login
-void loginUser() {
-    User users[100];
+// Function to login
+void login() {
     char username[50];
     char password[50];
 
-    // Load user info from file or database
-    FILE *userFile = fopen("users.txt", "r");
-    if (userFile == NULL) {
-        printf("Error opening user file.\n");
-        exit(EXIT_FAILURE);
-    }
-    int numUsers = 0;
-    while (fscanf(userFile, "%s %s", users[numUsers].username, users[numUsers].password) == 2) {
-        numUsers++;
-    }
-    fclose(userFile);
+    do {
+        printf("Enter your username: ");
+        scanf("%s", username);
+        printf("Enter your password: ");
+        scanf("%s", password);
 
-    printf("Enter your username: ");
-    scanf("%s", username);
-    printf("Enter your password: ");
-    scanf("%s", password);
-
-    int authenticated = 0;
-    for (int i = 0; i < numUsers; i++) {
-        if (strcmp(users[i].username, username) == 0 && strcmp(users[i].password, password) == 0) {
-            authenticated = 1;
-            break;
+        // Check if the credentials match any user
+        FILE *userFile = fopen("users.txt", "r");
+        if (userFile == NULL) {
+            printf("Error opening user file.\n");
+            exit(EXIT_FAILURE);
         }
-    }
 
-    if (authenticated) {
-        printf("User login successful.\n");
-        strcpy(currentUserType, "user");
-    } else {
-        printf("Invalid username or password. Exiting program.\n");
-        exit(EXIT_FAILURE);
-    }
-}
+        char storedUsername[50];
+        char storedPassword[50];
+        int authenticated = 0;
 
-// Function to handle admin login
-void loginAdmin() {
-    Admin admins[100];
-    char username[50];
-    char password[50];
-
-    // Load admin info from file or database
-    FILE *adminFile = fopen("admins.txt", "r");
-    if (adminFile == NULL) {
-        printf("Error opening admin file.\n");
-        exit(EXIT_FAILURE);
-    }
-    int numAdmins = 0;
-    while (fscanf(adminFile, "%s %s", admins[numAdmins].username, admins[numAdmins].password) == 2) {
-        numAdmins++;
-    }
-    fclose(adminFile);
-
-    printf("Enter your admin username: ");
-    scanf("%s", username);
-    printf("Enter your admin password: ");
-    scanf("%s", password);
-
-    int authenticated = 0;
-    for (int i = 0; i < numAdmins; i++) {
-        if (strcmp(admins[i].username, username) == 0 && strcmp(admins[i].password, password) == 0) {
-            authenticated = 1;
-            break;
+        while (fscanf(userFile, "%s %s", storedUsername, storedPassword) == 2) {
+            if (strcmp(storedUsername, username) == 0 && strcmp(storedPassword, password) == 0) {
+                authenticated = 1;
+                break;
+            }
         }
-    }
+        fclose(userFile);
 
-    if (authenticated) {
-        printf("Admin login successful.\n");
+        if (authenticated) {
+            printf("Login successful.\n");
+            strcpy(currentUserType, "user");
+            break;
+        } else {
+            printf("Invalid username or password. Please try again.\n");
+        }
+    } while (1);
+
+    // Redirect to user or admin menu based on credentials
+    if (strcmp(username, "admin4787") == 0 && strcmp(password, "adminstrator") == 0) {
         strcpy(currentUserType, "admin");
+        showAdminMenu();
     } else {
-        printf("Invalid admin username or password. Exiting program.\n");
-        exit(EXIT_FAILURE);
+        showUserMenu();
     }
 }
+
 
 // Function to display user menu
 // Function to display user menu
@@ -259,21 +179,25 @@ void showUserMenu() {
     populate_products(file_name);
 
     // Display Main Menu
+     system("cls");
     do {
         printf("\nMenu:\n");
         printf("1. Display Items\n");
         printf("2. Add Product to Cart\n");
         printf("3. View Cart\n");
         printf("4. Checkout\n");
-        printf("5. Exit\n");
+        printf("5. Sumbit Feedback\n");
+        printf("6. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
 
         switch (choice) {
             case 1:
+            system("cls");
                 displayProducts() ;
                 break;
             case 2: {
+                system("cls");
                 char name[MAX_LENGTH];
                 printf("Enter the product name: ");
                 scanf("%s", name);
@@ -283,12 +207,19 @@ void showUserMenu() {
                 break;
             }
             case 3:
+            system("cls");
                 view_cart();
                 break;
             case 4:
+            system("cls");
                 checkout(file_name);
                 break;
             case 5:
+            system("cls");
+                submitFeedback();
+                break;
+            case 6:
+            system("cls");
                 exit_program();
                 break;
             default:
@@ -296,6 +227,47 @@ void showUserMenu() {
         }
     } while (1);
 }
+
+void displayFeedback() {
+    FILE *feedbackFile = fopen("feedback.txt", "r");
+    if (feedbackFile == NULL) {
+        printf("Error: Unable to open feedback file.\n");
+        return;
+    }
+
+    printf("Feedback from users:\n");
+    char feedback[MAX_LENGTH];
+    while (fgets(feedback, MAX_LENGTH, feedbackFile) != NULL) {
+        printf("%s", feedback);
+    }
+
+    fclose(feedbackFile);
+}
+
+void submitFeedback() {
+    char feedback[MAX_LENGTH];
+
+    // Prompt the user for feedback
+    printf("Please enter your feedback (max %d characters): ", MAX_LENGTH);
+    getchar(); // Clear input buffer
+    fgets(feedback, MAX_LENGTH, stdin);
+
+    // Open the feedback file in append mode
+    FILE *file = fopen("feedback.txt", "a");
+    if (file == NULL) {
+        printf("Error opening feedback file.\n");
+        return;
+    }
+
+    // Write the feedback to the file
+    fprintf(file, "%s\n", feedback);
+
+    fclose(file);
+
+    printf("Thank you for your feedback!\n");
+}
+
+
 
 // Function to display admin menu
 void showAdminMenu() {
@@ -321,7 +293,8 @@ void showAdminMenu() {
         printf("2. Delete Product\n");
         printf("3. Track Product\n");
         printf("4. Display Products\n");
-        printf("5. Exit\n");
+        printf("5. Display Feedback\n"); 
+        printf("6. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
 
@@ -339,6 +312,9 @@ void showAdminMenu() {
                 displayProducts();
                 break;
             case 5:
+                displayFeedback(); 
+                break;
+            case 6:
                 exit(EXIT_SUCCESS);
             default:
                 printf("Invalid choice. Please try again.\n");
@@ -382,6 +358,8 @@ void trim(char *str) {
 
 // Function to read data from CSV and populate products array
 void populate_products(const char *file_name) {
+    numProducts = 0;
+
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
         printf("Error: Unable to open file '%s'\n", file_name);
@@ -571,87 +549,100 @@ void exit_program() {
 
 // Function to add a product
 void addProduct() {
-    if (numProducts >= MAX_PRODUCTS) {
-        printf("Error: Maximum number of products reached.\n");
-        return;
-    }
+    Product newProduct;
 
-    printf("Enter product details:\n");
-    char product_id[MAX_LENGTH];
-    char name[MAX_LENGTH];
-    double price;
-    int quantity;
+    printf("Enter product ID: ");
+    scanf("%s", newProduct.product_id);
+    printf("Enter product name: ");
+    scanf("%s", newProduct.name);
+    printf("Enter product price: ");
+    scanf("%lf", &newProduct.price);
+    printf("Enter product quantity: ");
+    scanf("%d", &newProduct.quantity);
 
-    printf("Product ID: ");
-    scanf("%s", product_id);
-    printf("Name: ");
-    scanf("%s", name);
-    printf("Price: ");
-    scanf("%lf", &price);
-    printf("Quantity: ");
-    scanf("%d", &quantity);
-
-    // Open the inventory.csv file in append mode
+    // Open file in append mode and write new product details
     FILE *file = fopen("inventory.csv", "a");
     if (file == NULL) {
         printf("Error: Unable to open file 'inventory.csv'\n");
         return;
     }
 
-    // Append the new product information to the file
-    fprintf(file, "%s,%s,%.2lf,%d\n", product_id, name, price, quantity);
+    fprintf(file, "%s,%s,%.2lf,%d\n", newProduct.product_id, newProduct.name, newProduct.price, newProduct.quantity);
     fclose(file);
 
-    printf("Product added successfully.\n");
+    printf("Product added successfully!\n");
+
+    populate_products("inventory.csv");
+
 }
 
 
 void deleteProduct() {
-    char product_id[MAX_LENGTH];
-    printf("Enter product ID to delete: ");
-    scanf("%s", product_id);
+    char productId[MAX_LENGTH];
+    printf("Enter the product ID to delete: ");
+    scanf("%s", productId);
 
-    int found = 0;
-    for (int i = 0; i < numProducts; i++) {
-        if (strcmp(products[i].product_id, product_id) == 0) {
-            // Remove product by shifting remaining products
-            for (int j = i; j < numProducts - 1; j++) {
-                products[j] = products[j + 1];
-            }
-            numProducts--;
+    // Open inventory file for reading and a temporary file for writing
+    FILE *inventoryFile = fopen("inventory.csv", "r");
+    FILE *tempFile = fopen("temp_inventory.csv", "w");
+    if (inventoryFile == NULL || tempFile == NULL) {
+        printf("Error: Unable to open file(s).\n");
+        return;
+    }
+
+    // Copy all products except the one to be deleted to the temporary file
+    char line[MAX_COLUMNS * MAX_LENGTH];
+    bool found = 0;
+    while (fgets(line, sizeof(line), inventoryFile)) {
+        char currentProductId[MAX_LENGTH];
+        sscanf(line, "%[^,],", currentProductId);
+        if (strcmp(currentProductId, productId) != 0) {
+            fprintf(tempFile, "%s", line);
+        } else {
             found = 1;
-            printf("Product deleted successfully.\n");
-            break;
         }
     }
 
-    if (!found) {
-        printf("Product with ID '%s' not found.\n", product_id);
-    }
+    // Close files
+    fclose(inventoryFile);
+    fclose(tempFile);
+
+    // Only replace the inventory file with the temporary file if a product was actually deleted
+   if (found) {
+    remove("inventory.csv");
+    rename("temp_inventory.csv", "inventory.csv");
+    printf("Product deleted successfully!\n");
+
+    // Repopulate the 'products' array with the data from the updated 'inventory.csv'
+    populate_products("inventory.csv");
+} else {
+    // If the product was not found, we don't need the temporary file
+    remove("temp_inventory.csv");
+    printf("Product ID not found, no product deleted.\n");
+}
+
+
 }
 
 // Function to track a product
 void trackProduct() {
-    char product_id[MAX_LENGTH];
-    printf("Enter product ID to track: ");
-    scanf("%s", product_id);
+    char productId[MAX_LENGTH];
+    printf("Enter the product ID to track: ");
+    scanf("%s", productId);
 
-    int found = 0;
+    // Search for product in inventory
     for (int i = 0; i < numProducts; i++) {
-        if (strcmp(products[i].product_id, product_id) == 0) {
+        if (strcmp(products[i].product_id, productId) == 0) {
             printf("Product found:\n");
             printf("Product ID: %s\n", products[i].product_id);
             printf("Name: %s\n", products[i].name);
             printf("Price: %.2lf\n", products[i].price);
             printf("Quantity: %d\n", products[i].quantity);
-            found = 1;
-            break;
+            return;
         }
     }
 
-    if (!found) {
-        printf("Product with ID '%s' not found.\n", product_id);
-    }
+    printf("Product not found!\n");
 }
 
 
@@ -668,6 +659,8 @@ void displayProducts() {
         printf("Product ID: %s, Name: %s, Price: %.2lf, Quantity: %d\n",
                products[i].product_id, products[i].name, products[i].price, products[i].quantity);
     }
+
+
 }
 
 
@@ -703,29 +696,3 @@ void clear_cart() {
     // Clear the cart by resetting its size to 0
     cart_size = 0;
 }
-
-void submitFeedback() {
-    char feedback[MAX_LENGTH];
-
-    // Prompt the user for feedback
-    printf("Please enter your feedback (max %d characters): ", MAX_LENGTH);
-    getchar(); // Clear input buffer
-    fgets(feedback, MAX_LENGTH, stdin);
-
-    // Open the feedback file in append mode
-    FILE *file = fopen("feedback.txt", "a");
-    if (file == NULL) {
-        printf("Error opening feedback file.\n");
-        return;
-    }
-
-    // Write the feedback to the file
-    fprintf(file, "%s\n", feedback);
-
-    fclose(file);
-
-    printf("Thank you for your feedback!\n");
-}
-
-
-
