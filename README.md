@@ -31,6 +31,9 @@ This project is an online store management system implemented in C. It provides 
 ```bash
 git clone https://github.com/your-username/online-store-management-system.git
 
+gcc main.c -o online_store
+
+./online_store
 
 Security Considerations
 
